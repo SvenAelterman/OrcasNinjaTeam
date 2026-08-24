@@ -3,7 +3,7 @@ param automationAccounts_aamysqlltr_name string = 'aamysqlltr'
 param userAssignedIdentities_umimysqlltr_name string = 'umimysqlltr'
 param location string = resourceGroup().location
 param backupfileshare string = 'backupfileshare'
-param _artifactsLocation string = deployment().properties.templateLink.uri
+param scriptLocation string = deployment().properties.templateLink.uri
 
 resource userAssignedIdentities_umimysqlltr_name_resource 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
   name: userAssignedIdentities_umimysqlltr_name
@@ -40,7 +40,7 @@ resource automationAccounts_aamysqlltr_name_backupmysqldb 'Microsoft.Automation/
     logActivityTrace: 0
     runbookType: 'PowerShell'
     publishContentLink: {
-      uri: uri(_artifactsLocation, 'runbook/backupmysql.ps1')
+      uri: uri(scriptLocation, 'runbook/backupmysql.ps1')
       version: '1.0.0.0'
     }
   }
@@ -51,7 +51,6 @@ resource storageAccounts_ltrmysqlbackup_name_resource 'Microsoft.Storage/storage
   location: location
   sku: {
     name: 'Standard_LRS'
-    tier: 'Standard'
   }
   kind: 'StorageV2'
   properties: {
@@ -81,54 +80,13 @@ resource storageAccounts_ltrmysqlbackup_name_resource 'Microsoft.Storage/storage
   }
 }
 
-resource storageAccounts_ltrmysqlbackup_name_default 'Microsoft.Storage/storageAccounts/blobServices@2021-06-01' = {
-  parent: storageAccounts_ltrmysqlbackup_name_resource
-  name: 'default'
-  sku: {
-    name: 'Standard_LRS'
-    tier: 'Standard'
-  }
-  properties: {
-    cors: {
-      corsRules: []
-    }
-    deleteRetentionPolicy: {
-      enabled: false
-    }
-  }
-}
-
 resource Microsoft_Storage_storageAccounts_fileServices_storageAccounts_ltrmysqlbackup_name_default 'Microsoft.Storage/storageAccounts/fileServices@2021-06-01' = {
   parent: storageAccounts_ltrmysqlbackup_name_resource
   name: 'default'
-  sku: {
-    name: 'Standard_LRS'
-    tier: 'Standard'
-  }
   properties: {
     shareDeleteRetentionPolicy: {
       enabled: true
       days: 7
-    }
-  }
-}
-
-resource Microsoft_Storage_storageAccounts_queueServices_storageAccounts_ltrmysqlbackup_name_default 'Microsoft.Storage/storageAccounts/queueServices@2021-06-01' = {
-  parent: storageAccounts_ltrmysqlbackup_name_resource
-  name: 'default'
-  properties: {
-    cors: {
-      corsRules: []
-    }
-  }
-}
-
-resource Microsoft_Storage_storageAccounts_tableServices_storageAccounts_ltrmysqlbackup_name_default 'Microsoft.Storage/storageAccounts/tableServices@2021-06-01' = {
-  parent: storageAccounts_ltrmysqlbackup_name_resource
-  name: 'default'
-  properties: {
-    cors: {
-      corsRules: []
     }
   }
 }
@@ -141,7 +99,4 @@ resource storageAccounts_ltrmysqlbackup_name_default_backupfileshare 'Microsoft.
     shareQuota: 5120
     enabledProtocols: 'SMB'
   }
-  dependsOn: [
-    storageAccounts_ltrmysqlbackup_name_resource
-  ]
 }
