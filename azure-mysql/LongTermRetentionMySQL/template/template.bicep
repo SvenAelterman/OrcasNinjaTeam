@@ -2,7 +2,7 @@ param storageAccountName string = 'mysqlltrprodst01${take(uniqueString(resourceG
 param automationAccountName string = 'MySQLLTR-prod-aa-${location}-01'
 param userAssignedIdentityName string = 'MySQLLTR-prod-id-${location}-01'
 param location string = resourceGroup().location
-param backupFileShareName string = 'BackupFileShare'
+param backupFileShareName string = 'backup-file-share'
 param scriptLocation string = deployment().properties.templateLink.uri
 
 param enableAvmTelemetry bool = true
@@ -31,6 +31,7 @@ module automationAccountModule 'br/public:avm/res/automation/automation-account:
         name: 'BackupMySqlDatabase'
         description: 'Runbook to backup MySQL database to Azure Storage for long-term retention. See https://techcommunity.microsoft.com/blog/adformysql/azure-database-for-mysql-extending-long-term-retention-by-using-containers/3065164'
         type: 'PowerShell'
+        runtimeEnvironment: 'PowerShell-7.2'
         uri: uri(scriptLocation, 'runbook/backupmysql.ps1')
         version: '1.0.0.0'
       }
