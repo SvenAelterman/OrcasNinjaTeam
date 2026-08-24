@@ -6,10 +6,13 @@ param backupFileShareName string = 'backup-file-share'
 param scriptLocation string = deployment().properties.templateLink.uri
 
 param enableAvmTelemetry bool = true
-param tags object = {}
+param tags object?
 
+@description('The private DNS zone must be linked to the virtual network already.')
 param fileSharePrivateDnsZoneResourceId string
 param fileSharePrivateEndpointSubnetResourceId string
+@description('Must be delegated to *Microsoft.ContainerInstance/containerGroups*')
+param containerInstanceSubnetResourceId string
 
 module userAssignedIdentityModule 'br/public:avm/res/managed-identity/user-assigned-identity:0.6.0' = {
   name: 'userAssignedIdentityModule'
@@ -60,6 +63,8 @@ module storageAccountModule 'br/public:avm/res/storage/storage-account:0.33.0' =
     kind: 'StorageV2'
 
     supportsHttpsTrafficOnly: true
+    // Required to support mounting container volume
+    allowSharedKeyAccess: true
 
     fileServices: {
       shareDeleteRetentionPolicy: {

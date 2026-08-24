@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "2319373017961842567"
+      "templateHash": "9973151771994383105"
     }
   },
   "parameters": {
@@ -40,13 +40,22 @@
     },
     "tags": {
       "type": "object",
-      "defaultValue": {}
+      "nullable": true
     },
     "fileSharePrivateDnsZoneResourceId": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "The private DNS zone must be linked to the virtual network already."
+      }
     },
     "fileSharePrivateEndpointSubnetResourceId": {
       "type": "string"
+    },
+    "containerInstanceSubnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Must be delegated to *Microsoft.ContainerInstance/containerGroups*"
+      }
     }
   },
   "resources": {
@@ -5320,6 +5329,9 @@
             "value": "StorageV2"
           },
           "supportsHttpsTrafficOnly": {
+            "value": true
+          },
+          "allowSharedKeyAccess": {
             "value": true
           },
           "fileServices": {
