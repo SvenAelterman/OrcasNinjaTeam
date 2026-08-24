@@ -30,7 +30,7 @@ module automationAccountModule 'br/public:avm/res/automation/automation-account:
       {
         name: 'BackupMySqlDatabase'
         description: 'Runbook to backup MySQL database to Azure Storage for long-term retention. See https://techcommunity.microsoft.com/blog/adformysql/azure-database-for-mysql-extending-long-term-retention-by-using-containers/3065164'
-        runbookType: 'PowerShell'
+        type: 'PowerShell'
         uri: uri(scriptLocation, 'runbook/backupmysql.ps1')
         version: '1.0.0.0'
       }

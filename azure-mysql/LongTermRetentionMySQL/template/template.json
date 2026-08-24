@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "9134192812476406599"
+      "templateHash": "16929608120404345695"
     }
   },
   "parameters": {
@@ -603,7 +603,7 @@
               {
                 "name": "BackupMySqlDatabase",
                 "description": "Runbook to backup MySQL database to Azure Storage for long-term retention. See https://techcommunity.microsoft.com/blog/adformysql/azure-database-for-mysql-extending-long-term-retention-by-using-containers/3065164",
-                "runbookType": "PowerShell",
+                "type": "PowerShell",
                 "uri": "[uri(parameters('scriptLocation'), 'runbook/backupmysql.ps1')]",
                 "version": "1.0.0.0"
               }
