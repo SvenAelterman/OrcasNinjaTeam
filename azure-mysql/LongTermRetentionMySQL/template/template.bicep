@@ -8,6 +8,9 @@ param scriptLocation string = deployment().properties.templateLink.uri
 param enableAvmTelemetry bool = true
 param tags object = {}
 
+param fileSharePrivateDnsZoneResourceId string
+param fileSharePrivateEndpointSubnetResourceId string
+
 module userAssignedIdentityModule 'br/public:avm/res/managed-identity/user-assigned-identity:0.6.0' = {
   name: 'userAssignedIdentityModule'
   params: {
@@ -72,6 +75,20 @@ module storageAccountModule 'br/public:avm/res/storage/storage-account:0.33.0' =
         }
       ]
     }
+
+    privateEndpoints: [
+      {
+        privateDnsZoneGroup: {
+          privateDnsZoneGroupConfigs: [
+            {
+              privateDnsZoneResourceId: fileSharePrivateDnsZoneResourceId
+            }
+          ]
+        }
+        subnetResourceId: fileSharePrivateEndpointSubnetResourceId
+        service: 'file'
+      }
+    ]
 
     enableTelemetry: enableAvmTelemetry
     tags: tags

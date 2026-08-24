@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "16797660017465063350"
+      "templateHash": "2319373017961842567"
     }
   },
   "parameters": {
@@ -41,6 +41,12 @@
     "tags": {
       "type": "object",
       "defaultValue": {}
+    },
+    "fileSharePrivateDnsZoneResourceId": {
+      "type": "string"
+    },
+    "fileSharePrivateEndpointSubnetResourceId": {
+      "type": "string"
     }
   },
   "resources": {
@@ -5331,6 +5337,21 @@
                 }
               ]
             }
+          },
+          "privateEndpoints": {
+            "value": [
+              {
+                "privateDnsZoneGroup": {
+                  "privateDnsZoneGroupConfigs": [
+                    {
+                      "privateDnsZoneResourceId": "[parameters('fileSharePrivateDnsZoneResourceId')]"
+                    }
+                  ]
+                },
+                "subnetResourceId": "[parameters('fileSharePrivateEndpointSubnetResourceId')]",
+                "service": "file"
+              }
+            ]
           },
           "enableTelemetry": {
             "value": "[parameters('enableAvmTelemetry')]"
