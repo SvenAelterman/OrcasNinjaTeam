@@ -10,9 +10,15 @@ param tags object?
 
 @description('The private DNS zone must be linked to the virtual network already.')
 param fileSharePrivateDnsZoneResourceId string
-param fileSharePrivateEndpointSubnetResourceId string
+param keyVaultPrivateDnsZoneResourceId string
+param privateEndpointSubnetResourceId string
 @description('Must be delegated to *Microsoft.ContainerInstance/containerGroups*')
 param containerInstanceSubnetResourceId string
+
+@secure()
+param mySqlUsername string
+@secure()
+param mySqlPassword string
 
 module userAssignedIdentityModule 'br/public:avm/res/managed-identity/user-assigned-identity:0.6.0' = {
   name: 'userAssignedIdentityModule'
@@ -90,8 +96,97 @@ module storageAccountModule 'br/public:avm/res/storage/storage-account:0.33.0' =
             }
           ]
         }
-        subnetResourceId: fileSharePrivateEndpointSubnetResourceId
+        subnetResourceId: privateEndpointSubnetResourceId
         service: 'file'
+      }
+    ]
+
+    enableTelemetry: enableAvmTelemetry
+    tags: tags
+  }
+}
+
+module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.13.0' = {
+  name: 'containerRegistryModule'
+  params: {
+    name: 'mysqlltrprodcr01${take(uniqueString(resourceGroup().id), 4)}'
+    location: location
+    acrSku: 'Basic'
+
+    // Required for Container Instance to pull the image
+    acrAdminUserEnabled: true
+
+    roleAssignmentMode: 'AbacRepositoryPermissions'
+
+    networkRuleBypassAllowedForTasks: true
+
+    roleAssignments: [
+      {
+        principalId: userAssignedIdentityModule.outputs.principalId
+        roleDefinitionIdOrName: 'AcrPull'
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: deployer().objectId
+        roleDefinitionIdOrName: 'AcrPush'
+        principalType: 'User'
+      }
+    ]
+
+    // tasks: [
+    //   {
+    //     name: 'BuildTask'
+    //   }
+    // ]
+
+    enableTelemetry: enableAvmTelemetry
+    tags: tags
+  }
+}
+
+module keyVaultModule 'br/public:avm/res/key-vault/vault:0.14.0' = {
+  name: 'keyVaultModule'
+  params: {
+    name: 'MySQLLTR-prod-kv-01${take(uniqueString(resourceGroup().id), 4)}'
+    location: location
+    enableRbacAuthorization: true
+    secrets: [
+      {
+        name: 'MySqlUsername'
+        value: mySqlUsername
+      }
+      {
+        name: 'MySqlPassword'
+        value: mySqlPassword
+      }
+    ]
+
+    publicNetworkAccess: 'Disabled'
+
+    privateEndpoints: [
+      {
+        privateDnsZoneGroup: {
+          privateDnsZoneGroupConfigs: [
+            {
+              privateDnsZoneResourceId: keyVaultPrivateDnsZoneResourceId
+            }
+          ]
+        }
+        subnetResourceId: privateEndpointSubnetResourceId
+        service: 'vault'
+      }
+    ]
+
+    roleAssignments: [
+      {
+        principalId: userAssignedIdentityModule.outputs.principalId
+        roleDefinitionIdOrName: 'Key Vault Secrets User'
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: deployer().objectId
+        roleDefinitionIdOrName: 'Key Vault Administrator'
+        principalType: 'User'
       }
     ]
 
