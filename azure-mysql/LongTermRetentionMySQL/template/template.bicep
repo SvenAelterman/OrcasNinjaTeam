@@ -1,102 +1,79 @@
-param storageAccounts_ltrmysqlbackup_name string = 'saltr${uniqueString(resourceGroup().id)}'
-param automationAccounts_aamysqlltr_name string = 'aamysqlltr'
-param userAssignedIdentities_umimysqlltr_name string = 'umimysqlltr'
+param storageAccountName string = 'mysqlltrprodst${location}01${take(uniqueString(resourceGroup().id), 4)}'
+param automationAccountName string = 'MySQLLTR-prod-aa-${location}-01'
+param userAssignedIdentityName string = 'MySQLLTR-prod-id-${location}-01'
 param location string = resourceGroup().location
-param backupfileshare string = 'backupfileshare'
+param backupFileShareName string = 'BackupFileShare'
 param scriptLocation string = deployment().properties.templateLink.uri
 
-resource userAssignedIdentities_umimysqlltr_name_resource 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
-  name: userAssignedIdentities_umimysqlltr_name
-  location: location
-}
+param enableAvmTelemetry bool = true
+param tags object = {}
 
-resource automationAccounts_aamysqlltr_name_resource 'Microsoft.Automation/automationAccounts@2021-06-22' = {
-  name: automationAccounts_aamysqlltr_name
-  location: location
-  identity: {
-    type: 'SystemAssigned, UserAssigned'
-    userAssignedIdentities: {
-      '${userAssignedIdentities_umimysqlltr_name_resource.id}': {}
-    }
-  }
-  properties: {
-    sku: {
-      name: 'Basic'
-    }
-    encryption: {
-      keySource: 'Microsoft.Automation'
-      identity: {}
-    }
+module userAssignedIdentityModule 'br/public:avm/res/managed-identity/user-assigned-identity:0.6.0' = {
+  name: 'userAssignedIdentityModule'
+  params: {
+    name: userAssignedIdentityName
+    location: location
+
+    enableTelemetry: enableAvmTelemetry
+    tags: tags
   }
 }
 
-resource automationAccounts_aamysqlltr_name_backupmysqldb 'Microsoft.Automation/automationAccounts/runbooks@2019-06-01' = {
-  parent: automationAccounts_aamysqlltr_name_resource
-  name: 'backupmysqldb'
-  location: location
-  properties: {
-    logVerbose: false
-    logProgress: false
-    logActivityTrace: 0
-    runbookType: 'PowerShell'
-    publishContentLink: {
-      uri: uri(scriptLocation, 'runbook/backupmysql.ps1')
-      version: '1.0.0.0'
-    }
-  }
-}
+module automationAccountModule 'br/public:avm/res/automation/automation-account:0.19.2' = {
+  name: 'automationAccountModule'
+  params: {
+    name: automationAccountName
+    location: location
+    skuName: 'Basic'
 
-resource storageAccounts_ltrmysqlbackup_name_resource 'Microsoft.Storage/storageAccounts@2021-06-01' = {
-  name: storageAccounts_ltrmysqlbackup_name
-  location: location
-  sku: {
-    name: 'Standard_LRS'
-  }
-  kind: 'StorageV2'
-  properties: {
-    minimumTlsVersion: 'TLS1_0'
-    allowBlobPublicAccess: true
-    networkAcls: {
-      bypass: 'AzureServices'
-      virtualNetworkRules: []
-      ipRules: []
-      defaultAction: 'Allow'
-    }
-    supportsHttpsTrafficOnly: true
-    encryption: {
-      services: {
-        file: {
-          keyType: 'Account'
-          enabled: true
-        }
-        blob: {
-          keyType: 'Account'
-          enabled: true
-        }
+    runbooks: [
+      {
+        name: 'BackupMySqlDatabase'
+        description: 'Runbook to backup MySQL database to Azure Storage for long-term retention. See https://techcommunity.microsoft.com/blog/adformysql/azure-database-for-mysql-extending-long-term-retention-by-using-containers/3065164'
+        runbookType: 'PowerShell'
+        uri: uri(scriptLocation, 'runbook/backupmysql.ps1')
+        version: '1.0.0.0'
       }
-      keySource: 'Microsoft.Storage'
+    ]
+
+    managedIdentities: {
+      systemAssigned: true
+      userAssignedResourceIds: [
+        userAssignedIdentityModule.outputs.resourceId
+      ]
     }
-    accessTier: 'Cool'
+
+    enableTelemetry: enableAvmTelemetry
+    tags: tags
   }
 }
 
-resource Microsoft_Storage_storageAccounts_fileServices_storageAccounts_ltrmysqlbackup_name_default 'Microsoft.Storage/storageAccounts/fileServices@2021-06-01' = {
-  parent: storageAccounts_ltrmysqlbackup_name_resource
-  name: 'default'
-  properties: {
-    shareDeleteRetentionPolicy: {
-      enabled: true
-      days: 7
-    }
-  }
-}
+module storageAccountModule 'br/public:avm/res/storage/storage-account:0.33.0' = {
+  name: 'storageAccountModule'
+  params: {
+    name: storageAccountName
+    location: location
+    skuName: 'Standard_GRS'
+    kind: 'StorageV2'
 
-resource storageAccounts_ltrmysqlbackup_name_default_backupfileshare 'Microsoft.Storage/storageAccounts/fileServices/shares@2021-06-01' = {
-  parent: Microsoft_Storage_storageAccounts_fileServices_storageAccounts_ltrmysqlbackup_name_default
-  name: backupfileshare
-  properties: {
-    accessTier: 'TransactionOptimized'
-    shareQuota: 5120
-    enabledProtocols: 'SMB'
+    supportsHttpsTrafficOnly: true
+
+    fileServices: {
+      shareDeleteRetentionPolicy: {
+        enabled: true
+        days: 7
+      }
+      shares: [
+        {
+          name: backupFileShareName
+          accessTier: 'TransactionOptimized'
+          shareQuota: 5120
+          enabledProtocols: 'SMB'
+        }
+      ]
+    }
+
+    enableTelemetry: enableAvmTelemetry
+    tags: tags
   }
 }
