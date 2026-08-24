@@ -6,13 +6,13 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "5512307111486158619"
+      "templateHash": "9134192812476406599"
     }
   },
   "parameters": {
     "storageAccountName": {
       "type": "string",
-      "defaultValue": "[format('mysqlltrprodst{0}01{1}', parameters('location'), take(uniqueString(resourceGroup().id), 4))]"
+      "defaultValue": "[format('mysqlltrprodst01{0}', take(uniqueString(resourceGroup().id), 4))]"
     },
     "automationAccountName": {
       "type": "string",

@@ -1,4 +1,4 @@
-param storageAccountName string = 'mysqlltrprodst${location}01${take(uniqueString(resourceGroup().id), 4)}'
+param storageAccountName string = 'mysqlltrprodst01${take(uniqueString(resourceGroup().id), 4)}'
 param automationAccountName string = 'MySQLLTR-prod-aa-${location}-01'
 param userAssignedIdentityName string = 'MySQLLTR-prod-id-${location}-01'
 param location string = resourceGroup().location
