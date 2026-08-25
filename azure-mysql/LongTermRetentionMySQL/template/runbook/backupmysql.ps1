@@ -63,7 +63,7 @@ $ContainerRegistryPassword = ConvertTo-SecureString ($ContainerRegistryCredentia
 $ImageRegistryCredential = New-AzContainerGroupImageRegistryCredentialObject -Server $ContainerRegistryUrl -Username $ContainerRegistryUsername -Password $ContainerRegistryPassword
 
 # Create the container instance object
-$Container = New-AzContainerInstanceObject -Name $ContainerName -Image schnitzler/mysqldump -VolumeMount $VolumeMount `
+$Container = New-AzContainerInstanceObject -Name $ContainerName -Image "$ContainerRegistryUrl/mysqlltrbackup:latest" -VolumeMount $VolumeMount `
     -Command $cmd
 
 $SubnetId = @{
