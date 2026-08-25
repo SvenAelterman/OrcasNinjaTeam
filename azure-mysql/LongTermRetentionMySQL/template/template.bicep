@@ -133,6 +133,7 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
       }
     ]
 
+    // TODO: Build the container image
     // tasks: [
     //   {
     //     name: 'BuildTask'
@@ -144,53 +145,22 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
   }
 }
 
-module keyVaultModule 'br/public:avm/res/key-vault/vault:0.14.0' = {
-  name: 'keyVaultModule'
+// This must be in a separate module so we can use the .listCredentials() function on the ACR resource,
+// which is not available here because the ACR is references as an existing resource.
+module keyVaultOuterModule 'keyVault.bicep' = {
+  name: 'keyVaultOuterModule'
   params: {
-    name: 'MySQLLTR-prod-kv-01${take(uniqueString(resourceGroup().id), 4)}'
+    acrName: containerRegistryModule.outputs.name
     location: location
-    enableRbacAuthorization: true
-    secrets: [
-      {
-        name: 'MySqlUsername'
-        value: mySqlUsername
-      }
-      {
-        name: 'MySqlPassword'
-        value: mySqlPassword
-      }
-    ]
+    keyVaultPrivateDnsZoneResourceId: keyVaultPrivateDnsZoneResourceId
+    privateEndpointSubnetResourceId: privateEndpointSubnetResourceId
+    uamiPrincipalId: userAssignedIdentityModule.outputs.principalId
+    mySqlUsername: mySqlUsername
+    mySqlPassword: mySqlPassword
 
-    publicNetworkAccess: 'Disabled'
-
-    privateEndpoints: [
-      {
-        privateDnsZoneGroup: {
-          privateDnsZoneGroupConfigs: [
-            {
-              privateDnsZoneResourceId: keyVaultPrivateDnsZoneResourceId
-            }
-          ]
-        }
-        subnetResourceId: privateEndpointSubnetResourceId
-        service: 'vault'
-      }
-    ]
-
-    roleAssignments: [
-      {
-        principalId: userAssignedIdentityModule.outputs.principalId
-        roleDefinitionIdOrName: 'Key Vault Secrets User'
-        principalType: 'ServicePrincipal'
-      }
-      {
-        principalId: deployer().objectId
-        roleDefinitionIdOrName: 'Key Vault Administrator'
-        principalType: 'User'
-      }
-    ]
-
-    enableTelemetry: enableAvmTelemetry
+    enableAvmTelemetry: enableAvmTelemetry
     tags: tags
   }
 }
+
+// TODO: Create role assignments on resource group
