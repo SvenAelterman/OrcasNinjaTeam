@@ -10,7 +10,6 @@ param tags object?
 
 @description('The private DNS zone must be linked to the virtual network already.')
 param fileSharePrivateDnsZoneResourceId string
-//param keyVaultPrivateDnsZoneResourceId string
 param privateEndpointSubnetResourceId string
 @description('Must be delegated to *Microsoft.ContainerInstance/containerGroups*')
 param containerInstanceSubnetResourceId string
@@ -153,24 +152,6 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
   }
 }
 
-// This must be in a separate module so we can use the .listCredentials() function on the ACR resource,
-// which is not available here because the ACR is references as an existing resource.
-// module keyVaultOuterModule 'keyVault.bicep' = {
-//   name: 'keyVaultOuterModule'
-//   params: {
-//     acrName: containerRegistryModule.outputs.name
-//     location: location
-//     keyVaultPrivateDnsZoneResourceId: keyVaultPrivateDnsZoneResourceId
-//     privateEndpointSubnetResourceId: privateEndpointSubnetResourceId
-//     uamiPrincipalId: userAssignedIdentityModule.outputs.principalId
-//     mySqlUsername: mySqlUsername
-//     mySqlPassword: mySqlPassword
-
-//     enableAvmTelemetry: enableAvmTelemetry
-//     tags: tags
-//   }
-// }
-
 // Create role assignments on resource group
 module resourceGroupRoleAssignmentModule 'br/public:avm/res/authorization/role-assignment/rg-scope:0.1.1' = {
   name: 'resourceGroupRoleAssignmentModule'
@@ -178,6 +159,25 @@ module resourceGroupRoleAssignmentModule 'br/public:avm/res/authorization/role-a
     principalId: userAssignedIdentityModule.outputs.principalId
     roleDefinitionIdOrName: 'Contributor'
     principalType: 'ServicePrincipal'
+
+    enableTelemetry: enableAvmTelemetry
+  }
+}
+
+var splitSubnetId = split(containerInstanceSubnetResourceId, '/')
+resource containerVirtualNetwork 'Microsoft.Network/virtualNetworks@2025-07-01' existing = {
+  name: splitSubnetId[8]
+  scope: resourceGroup(splitSubnetId[2], splitSubnetId[4])
+}
+
+// Create role assignment on the virtual network
+module vnetRoleAssignmentModule 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+  name: 'vnetRoleAssignmentModule'
+  params: {
+    principalId: userAssignedIdentityModule.outputs.principalId
+    roleDefinitionId: 'Network Contributor'
+    principalType: 'ServicePrincipal'
+    resourceId: containerVirtualNetwork.id
 
     enableTelemetry: enableAvmTelemetry
   }
