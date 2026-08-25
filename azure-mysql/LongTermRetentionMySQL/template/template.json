@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "11721698138073259076"
+      "templateHash": "5537306497020096995"
     }
   },
   "parameters": {
@@ -13979,6 +13979,37 @@
                 "principalId": "[deployer().objectId]",
                 "roleDefinitionIdOrName": "AcrPush",
                 "principalType": "User"
+              }
+            ]
+          },
+          "tasks": {
+            "value": [
+              {
+                "name": "BuildTask",
+                "platform": {
+                  "os": "Linux",
+                  "architecture": "amd64"
+                },
+                "status": "Enabled",
+                "step": {
+                  "type": "Docker",
+                  "dockerFilePath": "azure-mysql/LongTermRetentionMySQL/dockerfile"
+                },
+                "trigger": {
+                  "sourceTriggers": [
+                    {
+                      "name": "source",
+                      "sourceRepository": {
+                        "sourceControlType": "Github",
+                        "repositoryUrl": "https://github.com/SvenAelterman/OrcasNinjaTeam",
+                        "branch": "1-modernization-checklist"
+                      },
+                      "sourceTriggerEvents": [
+                        "commit"
+                      ]
+                    }
+                  ]
+                }
               }
             ]
           },

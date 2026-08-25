@@ -140,12 +140,34 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
       }
     ]
 
-    // TODO: Build the container image
-    // tasks: [
-    //   {
-    //     name: 'BuildTask'
-    //   }
-    // ]
+    // Build the container image
+    tasks: [
+      {
+        name: 'BuildTask'
+        platform: {
+          os: 'Linux'
+          architecture: 'amd64'
+        }
+        status: 'Enabled'
+        step: {
+          type: 'Docker'
+          dockerFilePath: 'azure-mysql/LongTermRetentionMySQL/dockerfile'
+        }
+        trigger: {
+          sourceTriggers: [
+            {
+              name: 'source'
+              sourceRepository: {
+                sourceControlType: 'Github'
+                repositoryUrl: 'https://github.com/SvenAelterman/OrcasNinjaTeam'
+                branch: '1-modernization-checklist'
+              }
+              sourceTriggerEvents: ['commit']
+            }
+          ]
+        }
+      }
+    ]
 
     enableTelemetry: enableAvmTelemetry
     tags: tags
