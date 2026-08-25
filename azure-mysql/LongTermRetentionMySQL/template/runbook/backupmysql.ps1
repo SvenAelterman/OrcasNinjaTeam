@@ -39,10 +39,10 @@ $filename = "--result-file=/data/backups/dumps" + $datetimestr + ".sql"
 $h1 = "--host=" + $DatabaseHostName
 # TODO: Use Key Vault for secret
 $user = "--user=" + $MySQLUsername
-$pwd = "--password=" + $MySQLPassword
+$sqlPassword = "--password=" + $MySQLPassword
 $dbnamearray = $DatabaseNames.split(" ")
 
-$cmd = "mysqldump", "--opt", "--single-transaction", $h1, $user, $pwd, $filename, "--databases"
+$cmd = "mysqldump", "--opt", "--single-transaction", $h1, $user, $sqlPassword, $filename, "--databases"
 
 foreach ($names in $dbnamearray) {
     $cmd += $names
@@ -59,17 +59,21 @@ $Volume = New-AzContainerGroupVolumeObject -Name "backups" -AzureFileShareName $
 
 $ContainerRegistryCredential = Get-AutomationPSCredential -Name "ContainerRegistryCredential"
 $ContainerRegistryUsername = $ContainerRegistryCredential.UserName
-$ContainerRegistryPassword = $ContainerRegistryCredential.GetNetworkCredential().Password
+$ContainerRegistryPassword = ConvertTo-SecureString ($ContainerRegistryCredential.GetNetworkCredential().Password) -AsPlainText -Force
 $ImageRegistryCredential = New-AzContainerGroupImageRegistryCredentialObject -Server $ContainerRegistryUrl -Username $ContainerRegistryUsername -Password $ContainerRegistryPassword
 
 # Create the container instance object
 $Container = New-AzContainerInstanceObject -Name $ContainerName -Image schnitzler/mysqldump -VolumeMount $VolumeMount `
     -Command $cmd
 
+$SubnetId = @{
+    Id   = $ContainerInstanceSubnetResourceId
+    Name = "ContainerSubnet"   
+}
 # Deploy the container in a container group
 Write-Output "Creating container..."
 $ContainerGroup = New-AzContainerGroup -ResourceGroupName $ContainerResourceGroupName -Name $ContainerName -Location $Location -Container $Container -Volume $Volume `
-    -RestartPolicy Never -OSType Linux -SubnetId $ContainerInstanceSubnetResourceId `
+    -RestartPolicy Never -OSType Linux -SubnetId $SubnetId `
     -ImageRegistryCredential $ImageRegistryCredential
 
 while ($true) {
