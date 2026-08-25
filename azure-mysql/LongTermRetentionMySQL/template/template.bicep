@@ -10,7 +10,7 @@ param tags object?
 
 @description('The private DNS zone must be linked to the virtual network already.')
 param fileSharePrivateDnsZoneResourceId string
-param keyVaultPrivateDnsZoneResourceId string
+//param keyVaultPrivateDnsZoneResourceId string
 param privateEndpointSubnetResourceId string
 @description('Must be delegated to *Microsoft.ContainerInstance/containerGroups*')
 param containerInstanceSubnetResourceId string
@@ -35,73 +35,26 @@ module userAssignedIdentityModule 'br/public:avm/res/managed-identity/user-assig
   }
 }
 
-var runBookName = 'BackupMySqlDatabase'
-var scheduleName = 'WeeklyOnSundaySchedule'
-
-module automationAccountModule 'br/public:avm/res/automation/automation-account:0.19.2' = {
-  name: 'automationAccountModule'
+module automationAccountOuterModule 'automationAccount.bicep' = {
+  name: 'automationAccountOuterModule'
   params: {
-    name: automationAccountName
+    automationAccountName: automationAccountName
+    containerInstanceSubnetResourceId: containerInstanceSubnetResourceId
+    scriptLocation: scriptLocation
     location: location
-    skuName: 'Basic'
-
-    runbooks: [
-      {
-        name: runBookName
-        description: 'Runbook to backup MySQL database to Azure Storage for long-term retention. See https://techcommunity.microsoft.com/blog/adformysql/azure-database-for-mysql-extending-long-term-retention-by-using-containers/3065164'
-        type: 'PowerShell72'
-        uri: uri(scriptLocation, 'runbook/backupmysql.ps1')
-        version: '1.0.0.0'
-      }
-    ]
-
-    schedules: [
-      {
-        name: scheduleName
-        description: 'Schedule to run every week at 2 AM UTC.'
-        frequency: 'Week'
-        interval: 1
-        startTime: '${scheduleStartDate}T${scheduleStartTimeUtc}'
-        timeZone: 'America/New_York'
-        advancedSchedule: {
-          weekDays: ['Sunday']
-        }
-      }
-    ]
-
-    jobSchedules: [
-      {
-        description: 'Schedule to run the ${runBookName} runbook based on the ${scheduleName} schedule.'
-        runbookName: runBookName
-        scheduleName: scheduleName
-
-        parameters: {
-          // TODO: List all
-          ManagedIdentityClientId: userAssignedIdentityModule.outputs.clientId
-          ContainerResourceGroupName: resourceGroup().name
-          DatabaseHostName: databaseHostName
-          // TODO: Remove secrets from here
-          MySqlUsername: mySqlUsername
-          MySqlPassword: mySqlPassword
-          // End secrets
-          DatabaseNames: join(databaseNamesForBackup, ' ')
-          StorageAccountName: storageAccountModule.outputs.name
-          BackupFileShareName: backupFileShareName
-          ContainerInstanceSubnetResourceId: containerInstanceSubnetResourceId
-          ContainerRegistryUrl: containerRegistryModule.outputs.loginServer
-          Location: location
-        }
-      }
-    ]
-
-    managedIdentities: {
-      systemAssigned: true
-      userAssignedResourceIds: [
-        userAssignedIdentityModule.outputs.resourceId
-      ]
-    }
-
-    enableTelemetry: enableAvmTelemetry
+    scheduleStartDate: scheduleStartDate
+    scheduleStartTimeUtc: scheduleStartTimeUtc
+    uamiClientId: userAssignedIdentityModule.outputs.clientId
+    uamiResourceId: userAssignedIdentityModule.outputs.resourceId
+    databaseHostName: databaseHostName
+    databaseNamesForBackup: databaseNamesForBackup
+    storageAccountName: storageAccountName
+    backupFileShareName: backupFileShareName
+    containerRegistryLoginServer: containerRegistryModule.outputs.loginServer
+    mySqlUsername: mySqlUsername
+    mySqlPassword: mySqlPassword
+    acrName: containerRegistryModule.outputs.name
+    enableAvmTelemetry: enableAvmTelemetry
     tags: tags
   }
 }
@@ -202,25 +155,25 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
 
 // This must be in a separate module so we can use the .listCredentials() function on the ACR resource,
 // which is not available here because the ACR is references as an existing resource.
-module keyVaultOuterModule 'keyVault.bicep' = {
-  name: 'keyVaultOuterModule'
-  params: {
-    acrName: containerRegistryModule.outputs.name
-    location: location
-    keyVaultPrivateDnsZoneResourceId: keyVaultPrivateDnsZoneResourceId
-    privateEndpointSubnetResourceId: privateEndpointSubnetResourceId
-    uamiPrincipalId: userAssignedIdentityModule.outputs.principalId
-    mySqlUsername: mySqlUsername
-    mySqlPassword: mySqlPassword
+// module keyVaultOuterModule 'keyVault.bicep' = {
+//   name: 'keyVaultOuterModule'
+//   params: {
+//     acrName: containerRegistryModule.outputs.name
+//     location: location
+//     keyVaultPrivateDnsZoneResourceId: keyVaultPrivateDnsZoneResourceId
+//     privateEndpointSubnetResourceId: privateEndpointSubnetResourceId
+//     uamiPrincipalId: userAssignedIdentityModule.outputs.principalId
+//     mySqlUsername: mySqlUsername
+//     mySqlPassword: mySqlPassword
 
-    enableAvmTelemetry: enableAvmTelemetry
-    tags: tags
-  }
-}
+//     enableAvmTelemetry: enableAvmTelemetry
+//     tags: tags
+//   }
+// }
 
 // Create role assignments on resource group
-module roleAssignmentsModule 'br/public:avm/res/authorization/role-assignment/rg-scope:0.1.1' = {
-  name: 'roleAssignmentsModule'
+module resourceGroupRoleAssignmentModule 'br/public:avm/res/authorization/role-assignment/rg-scope:0.1.1' = {
+  name: 'resourceGroupRoleAssignmentModule'
   params: {
     principalId: userAssignedIdentityModule.outputs.principalId
     roleDefinitionIdOrName: 'Contributor'
