@@ -169,6 +169,16 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
         managedIdentities: {
           userAssignedResourceIds: [userAssignedIdentityModule.outputs.resourceId]
         }
+        // disable-next-line required due to 
+        #disable-next-line BCP037
+        credentials: {
+          // An ABAC-enabled registry requires credentials for the task to access the registry.
+          // The user-assigned identity is used to authenticate to the registry.
+          sourceRegistry: {
+            loginMode: 'Default'
+            identity: userAssignedIdentityModule.outputs.clientId
+          }
+        }
         step: {
           type: 'Docker'
           dockerFilePath: 'dockerfile'

@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "573091811933301258"
+      "templateHash": "17368380485835911644"
     }
   },
   "parameters": {
@@ -14006,6 +14006,12 @@
                   "userAssignedResourceIds": [
                     "[reference('userAssignedIdentityModule').outputs.resourceId.value]"
                   ]
+                },
+                "credentials": {
+                  "sourceRegistry": {
+                    "loginMode": "Default",
+                    "identity": "[reference('userAssignedIdentityModule').outputs.clientId.value]"
+                  }
                 },
                 "step": {
                   "type": "Docker",
