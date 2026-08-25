@@ -19,7 +19,7 @@ param mySqlUsername string = 'sqladmin'
 @secure()
 param mySqlPassword string
 
-param scheduleStartDate string = format(dateTimeAdd(utcNow(), 'P1D'), 'yyyy-MM-dd')
+param scheduleStartDate string = dateTimeAdd(utcNow(), 'P1D', 'yyyy-MM-dd')
 param scheduleStartTime string = '02:00:00'
 param databaseNamesForBackup array = ['redcapdb']
 param databaseHostName string
