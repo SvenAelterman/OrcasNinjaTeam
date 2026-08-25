@@ -20,11 +20,15 @@ Param(
     [Parameter(Mandatory = $true)]
     [string] $ContainerRegistryUrl,
     [Parameter(Mandatory = $true)]
-    [string] $Location
+    [string] $Location,
+    [Parameter(Mandatory = $true)]
+    [string] $KeyVaultName
 )
 
 # Ensures you do not inherit an AzContext in your runbook
 Disable-AzContextAutosave -Scope Process
+
+$ErrorActionPreference = "Stop"
 
 # Connect to Azure with the specified user-assigned managed identity
 $AzureContext = (Connect-AzAccount -Identity -AccountId $ManagedIdentityClientId).context
@@ -50,17 +54,18 @@ foreach ($names in $dbnamearray) {
     $cmd += $names
 }
 
-#get storage keys
-$storagekey = ((Get-AzStorageAccountKey -ResourceGroupName $ContainerResourceGroupName -AccountName $StorageAccountName) | Where-object { $_.KeyName -eq "Key1" }).value
-#create mount object as backup volume in container
+# Get storage account access key
+$StorageAccountKey = ConvertTo-SecureString ((Get-AzStorageAccountKey -ResourceGroupName $ContainerResourceGroupName -AccountName $StorageAccountName) | Where-object { $_.KeyName -eq "Key1" }).Value -AsPlainText -Force
+# Create mount object as backup volume in container
 $VolumeMount = New-AzContainerInstanceVolumeMountObject -Name "backups" -MountPath "/data/backups/" -ReadOnly $false
 # Create a new volume on the mount object from the Azure File share
 $Volume = New-AzContainerGroupVolumeObject -Name "backups" -AzureFileShareName $BackupFileShareName `
     -AzureFileStorageAccountName $StorageAccountName `
-    -AzureFileStorageAccountKey (ConvertTo-SecureString $storagekey -AsPlainText -Force)
+    -AzureFileStorageAccountKey $StorageAccountKey 
 
-# TODO: Use Key Vault for secret
-$ImageRegistryCredential = New-AzContainerGroupImageRegistryCredentialObject -Server $ContainerRegistryUrl -Username "username" -Password $pwd
+$ContainerRegistryUsername = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name "ContainerRegistryUsername").SecretValueText
+$ContainerRegistryPassword = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name "ContainerRegistryPassword").SecretValueText
+$ImageRegistryCredential = New-AzContainerGroupImageRegistryCredentialObject -Server $ContainerRegistryUrl -Username $ContainerRegistryUsername -Password $ContainerRegistryPassword
 
 # Create the container instance object
 $Container = New-AzContainerInstanceObject -Name $ContainerName -Image schnitzler/mysqldump -VolumeMount $VolumeMount `
