@@ -20,7 +20,7 @@ param mySqlUsername string = 'sqladmin'
 param mySqlPassword string
 
 param scheduleStartDate string = dateTimeAdd(utcNow(), 'P1D', 'yyyy-MM-dd')
-param scheduleStartTime string = '02:00:00'
+param scheduleStartTimeUtc string = '06:00:00' // 2 AM Eastern Time
 param databaseNamesForBackup array = ['redcapdb']
 param databaseHostName string
 
@@ -61,7 +61,7 @@ module automationAccountModule 'br/public:avm/res/automation/automation-account:
         description: 'Schedule to run every week at 2 AM UTC.'
         frequency: 'Week'
         interval: 1
-        startTime: '${scheduleStartDate}T${scheduleStartTime}'
+        startTime: '${scheduleStartDate}T${scheduleStartTimeUtc}'
         timeZone: 'America/New_York'
         advancedSchedule: {
           weekDays: ['Sunday']
@@ -147,6 +147,15 @@ module storageAccountModule 'br/public:avm/res/storage/storage-account:0.33.0' =
       }
     ]
 
+    roleAssignments: [
+      {
+        principalId: userAssignedIdentityModule.outputs.principalId
+        // Required role to retrieve storage account keys for mounting the file share in the container instance
+        roleDefinitionIdOrName: 'Storage Account Key Operator Service Role'
+        principalType: 'ServicePrincipal'
+      }
+    ]
+
     enableTelemetry: enableAvmTelemetry
     tags: tags
   }
@@ -209,4 +218,14 @@ module keyVaultOuterModule 'keyVault.bicep' = {
   }
 }
 
-// TODO: Create role assignments on resource group
+// Create role assignments on resource group
+module roleAssignmentsModule 'br/public:avm/res/authorization/role-assignment/rg-scope:0.1.1' = {
+  name: 'roleAssignmentsModule'
+  params: {
+    principalId: userAssignedIdentityModule.outputs.principalId
+    roleDefinitionIdOrName: 'Contributor'
+    principalType: 'ServicePrincipal'
+
+    enableTelemetry: enableAvmTelemetry
+  }
+}
