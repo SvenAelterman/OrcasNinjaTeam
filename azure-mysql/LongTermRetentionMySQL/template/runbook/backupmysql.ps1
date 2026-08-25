@@ -6,10 +6,6 @@ Param(
     [Parameter(Mandatory = $true)]
     [string] $DatabaseHostName,
     [Parameter(Mandatory = $true)]
-    [string] $MySQLUsername,
-    [Parameter(Mandatory = $true)]
-    [string] $MySQLPassword,
-    [Parameter(Mandatory = $true)]
     [string] $DatabaseNames,
     [Parameter(Mandatory = $true)]
     [string] $StorageAccountName,
@@ -20,9 +16,7 @@ Param(
     [Parameter(Mandatory = $true)]
     [string] $ContainerRegistryUrl,
     [Parameter(Mandatory = $true)]
-    [string] $Location,
-    [Parameter(Mandatory = $true)]
-    [string] $KeyVaultName
+    [string] $Location
 )
 
 # Ensures you do not inherit an AzContext in your runbook
@@ -63,8 +57,9 @@ $Volume = New-AzContainerGroupVolumeObject -Name "backups" -AzureFileShareName $
     -AzureFileStorageAccountName $StorageAccountName `
     -AzureFileStorageAccountKey $StorageAccountKey 
 
-$ContainerRegistryUsername = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name "ContainerRegistryUsername").SecretValueText
-$ContainerRegistryPassword = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name "ContainerRegistryPassword").SecretValueText
+$ContainerRegistryCredential = Get-AutomationPSCredential -Name "ContainerRegistryCredential"
+$ContainerRegistryUsername = $ContainerRegistryCredential.UserName
+$ContainerRegistryPassword = $ContainerRegistryCredential.GetNetworkCredential().Password
 $ImageRegistryCredential = New-AzContainerGroupImageRegistryCredentialObject -Server $ContainerRegistryUrl -Username $ContainerRegistryUsername -Password $ContainerRegistryPassword
 
 # Create the container instance object
