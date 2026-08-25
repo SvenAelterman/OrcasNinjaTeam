@@ -1,90 +1,96 @@
 Param(
-    [Parameter(Mandatory=$true)]
-    [String] $AccountID,
     [Parameter(Mandatory = $true)]
-    [String] $rgname,
+    [string] $ManagedIdentityClientId,
     [Parameter(Mandatory = $true)]
-    [String] $hostname,
+    [string] $ContainerResourceGroupName,
     [Parameter(Mandatory = $true)]
-    [String] $username,
+    [string] $DatabaseHostName,
     [Parameter(Mandatory = $true)]
-    [String] $password,
-	[Parameter(Mandatory = $true)]
-    [String] $dbnames,
+    [string] $MySQLUsername,
     [Parameter(Mandatory = $true)]
-    [String] $storagename,
+    [string] $MySQLPassword,
     [Parameter(Mandatory = $true)]
-    [String] $backupfileshare  
+    [string] $DatabaseNames,
+    [Parameter(Mandatory = $true)]
+    [string] $StorageAccountName,
+    [Parameter(Mandatory = $true)]
+    [string] $BackupFileShareName,
+    [Parameter(Mandatory = $true)]
+    [string] $ContainerInstanceSubnetResourceId,
+    [Parameter(Mandatory = $true)]
+    [string] $ContainerRegistryUrl,
+    [Parameter(Mandatory = $true)]
+    [string] $Location
 )
 
 # Ensures you do not inherit an AzContext in your runbook
 Disable-AzContextAutosave -Scope Process
 
-#get the managed identity
-# Connect to Azure with user-assigned managed identity
-$AzureContext = (Connect-AzAccount -Identity -AccountId $AccountID).context
+# Connect to Azure with the specified user-assigned managed identity
+$AzureContext = (Connect-AzAccount -Identity -AccountId $ManagedIdentityClientId).context
 
 # set and store context
 $AzureContext = Set-AzContext -SubscriptionName $AzureContext.Subscription -DefaultProfile $AzureContext
 
-Write-Output "Successfully connected with Automation account's Managed Identity"  
+Write-Output "Successfully connected with Automation account's Managed Identity"
 
-$datetimestr=get-date -format "yyyyMMddhhmmss"
-$filename="--result-file=/data/backups/dumps"+$datetimestr+".sql"
-$h1 = "--host="+$hostname
-$user = "--user="+$username
-$pwd = "--password="+$password
-$dbnamearray = $dbnames.split(" ")
+$ContainerName = 'mysqldumpci1'
 
-$cmd = "mysqldump","--opt","--single-transaction",$h1,$user,$pwd,$filename,"--databases"
+$datetimestr = Get-Date -Format "yyyyMMddhhmmss"
+$filename = "--result-file=/data/backups/dumps" + $datetimestr + ".sql"
+$h1 = "--host=" + $DatabaseHostName
+# TODO: Use Key Vault for secret
+$user = "--user=" + $MySQLUsername
+$pwd = "--password=" + $MySQLPassword
+$dbnamearray = $DatabaseNames.split(" ")
 
-foreach ($names in $dbnamearray)
-{
-    $cmd+=$names
+$cmd = "mysqldump", "--opt", "--single-transaction", $h1, $user, $pwd, $filename, "--databases"
 
+foreach ($names in $dbnamearray) {
+    $cmd += $names
 }
 
 #get storage keys
-$storagekey=((Get-AzStorageAccountKey -ResourceGroupName $rgname -AccountName $storagename) | Where-object {$_.KeyName -eq "Key1"}).value
+$storagekey = ((Get-AzStorageAccountKey -ResourceGroupName $ContainerResourceGroupName -AccountName $StorageAccountName) | Where-object { $_.KeyName -eq "Key1" }).value
 #create mount object as backup volume in container
-$volumemount=New-AzContainerInstanceVolumeMountObject -Name "backups" -MountPath "/data/backups/" -ReadOnly $false
-#create new volume on the mount object from the azure fileshare
-$volume=New-AzContainerGroupVolumeObject -Name "backups" -AzureFileShareName $backupfileshare `
-        -AzureFileStorageAccountName $storagename `
-        -AzureFileStorageAccountKey (ConvertTo-SecureString $storagekey -AsPlainText -Force)
-#create container object
-$container = New-AzContainerInstanceObject -Name mysqldumpci1 -Image schnitzler/mysqldump -VolumeMount $volumemount `
-            -Command $cmd
-#deploy the container in azure container groups
-Write-Output "creating container"
-$containergroup=New-AzContainerGroup -ResourceGroupName $rgname -Name mysqldumpci1  -Location eastus -Container $container -Volume $volume `
-            -RestartPolicy Never -OSType Linux 
+$VolumeMount = New-AzContainerInstanceVolumeMountObject -Name "backups" -MountPath "/data/backups/" -ReadOnly $false
+# Create a new volume on the mount object from the Azure File share
+$Volume = New-AzContainerGroupVolumeObject -Name "backups" -AzureFileShareName $BackupFileShareName `
+    -AzureFileStorageAccountName $StorageAccountName `
+    -AzureFileStorageAccountKey (ConvertTo-SecureString $storagekey -AsPlainText -Force)
 
-while ($true)
-{
-	$status=(get-azcontainergroup -name mysqldumpci1 -resourcegroupname $rgname | select-object -property @{name="Status";expression={$_.InstanceViewState}}).Status
-	if ($status -eq "Failed")
-	{
-		Write-Output "Container in Failed State, Please check the logs below"
-		Break
-	}
-	elseif(($status -eq "Stopped")  -or ($status -eq "Succeeded"))
-	{
-		Write-Output "Container execution is done, Please check the logs below"
-		Break
-	}
-	else
-	{
-		Write-Output $status
-        start-sleep -seconds 30
-	}
+# TODO: Use Key Vault for secret
+$ImageRegistryCredential = New-AzContainerGroupImageRegistryCredentialObject -Server $ContainerRegistryUrl -Username "username" -Password $pwd
+
+# Create the container instance object
+$Container = New-AzContainerInstanceObject -Name $ContainerName -Image schnitzler/mysqldump -VolumeMount $VolumeMount `
+    -Command $cmd
+
+# Deploy the container in a container group
+Write-Output "Creating container..."
+$ContainerGroup = New-AzContainerGroup -ResourceGroupName $ContainerResourceGroupName -Name $ContainerName -Location $Location -Container $Container -Volume $Volume `
+    -RestartPolicy Never -OSType Linux -SubnetId $ContainerInstanceSubnetResourceId `
+    -ImageRegistryCredential $ImageRegistryCredential
+
+while ($true) {
+    $Status = (Get-AzContainerGroup -Name $ContainerName -ResourceGroupName $ContainerResourceGroupName | Select-Object -Property @{Name = "Status"; Expression = { $_.InstanceViewState } }).Status
+
+    if ($Status -eq "Failed") {
+        Write-Output "Container in Failed State. Please check the logs below."
+        Break
+    }
+    elseif ($Status -eq "Stopped" -or $Status -eq "Succeeded") {
+        Write-Output "Container execution complete. Please check the logs below."
+        Break
+    }
+    else {
+        Write-Output $Status
+        Start-Sleep -Seconds 30
+    }
 }
 
-Get-AzContainerInstanceLog -ContainerGroupName mysqldumpci1 -ContainerName mysqldumpci1 -ResourceGroupName $rgname | Write-Output
+Get-AzContainerInstanceLog -ContainerGroupName $ContainerGroup.Name -Container.Name $ContainerName -ResourceGroupName $ContainerResourceGroupName | Write-Output
 
-#stop container after backup
-Write-Output "stopping container"
-Stop-AzContainerGroup -Name mysqldumpci1 -ResourceGroupName $rgname
-
-#remove container
-
+# Stop container after backup
+Write-Output "Stopping container..."
+Stop-AzContainerGroup -Name $ContainerGroup.Name -ResourceGroupName $ContainerResourceGroupName
