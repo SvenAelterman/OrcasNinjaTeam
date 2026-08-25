@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "5537306497020096995"
+      "templateHash": "17004038249773387417"
     }
   },
   "parameters": {
@@ -13993,22 +13993,12 @@
                 "status": "Enabled",
                 "step": {
                   "type": "Docker",
-                  "dockerFilePath": "azure-mysql/LongTermRetentionMySQL/dockerfile"
-                },
-                "trigger": {
-                  "sourceTriggers": [
-                    {
-                      "name": "source",
-                      "sourceRepository": {
-                        "sourceControlType": "Github",
-                        "repositoryUrl": "https://github.com/SvenAelterman/OrcasNinjaTeam",
-                        "branch": "1-modernization-checklist"
-                      },
-                      "sourceTriggerEvents": [
-                        "commit"
-                      ]
-                    }
-                  ]
+                  "dockerFilePath": "dockerfile",
+                  "imageNames": [
+                    "mysqlltrbackup:latest"
+                  ],
+                  "isPushEnabled": true,
+                  "contextPath": "https://github.com/SvenAelterman/OrcasNinjaTeam.git#:azure-mysql/LongTermRetentionMySQL"
                 }
               }
             ]

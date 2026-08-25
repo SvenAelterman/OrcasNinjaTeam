@@ -151,20 +151,12 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
         status: 'Enabled'
         step: {
           type: 'Docker'
-          dockerFilePath: 'azure-mysql/LongTermRetentionMySQL/dockerfile'
-        }
-        trigger: {
-          sourceTriggers: [
-            {
-              name: 'source'
-              sourceRepository: {
-                sourceControlType: 'Github'
-                repositoryUrl: 'https://github.com/SvenAelterman/OrcasNinjaTeam'
-                branch: '1-modernization-checklist'
-              }
-              sourceTriggerEvents: ['commit']
-            }
+          dockerFilePath: 'dockerfile'
+          imageNames: [
+            'mysqlltrbackup:latest'
           ]
+          isPushEnabled: true
+          contextPath: 'https://github.com/SvenAelterman/OrcasNinjaTeam.git#:azure-mysql/LongTermRetentionMySQL'
         }
       }
     ]
