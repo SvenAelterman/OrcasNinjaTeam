@@ -135,7 +135,8 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
       }
       {
         principalId: deployer().objectId
-        roleDefinitionIdOrName: 'AcrPush'
+        // Assign registry-wide permissions
+        roleDefinitionIdOrName: 'Container Registry Repository Contributor'
         principalType: 'User'
       }
     ]

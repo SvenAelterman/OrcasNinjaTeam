@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "17004038249773387417"
+      "templateHash": "4262469747170473448"
     }
   },
   "parameters": {
@@ -13977,7 +13977,7 @@
               },
               {
                 "principalId": "[deployer().objectId]",
-                "roleDefinitionIdOrName": "AcrPush",
+                "roleDefinitionIdOrName": "Container Registry Repository Contributor",
                 "principalType": "User"
               }
             ]
