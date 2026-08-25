@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "4262469747170473448"
+      "templateHash": "6465597932701872879"
     }
   },
   "parameters": {
@@ -13979,13 +13979,18 @@
                 "principalId": "[deployer().objectId]",
                 "roleDefinitionIdOrName": "Container Registry Repository Contributor",
                 "principalType": "User"
+              },
+              {
+                "principalId": "[deployer().objectId]",
+                "roleDefinitionIdOrName": "Container Registry Repository Catalog Lister",
+                "principalType": "User"
               }
             ]
           },
           "tasks": {
             "value": [
               {
-                "name": "BuildTask",
+                "name": "LTRBackupImageBuildTask",
                 "platform": {
                   "os": "Linux",
                   "architecture": "amd64"
@@ -13998,7 +14003,7 @@
                     "mysqlltrbackup:latest"
                   ],
                   "isPushEnabled": true,
-                  "contextPath": "https://github.com/SvenAelterman/OrcasNinjaTeam.git#:azure-mysql/LongTermRetentionMySQL"
+                  "contextPath": "https://github.com/SvenAelterman/OrcasNinjaTeam.git#1-modernization-checklist:azure-mysql/LongTermRetentionMySQL"
                 }
               }
             ]

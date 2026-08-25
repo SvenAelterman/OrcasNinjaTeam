@@ -139,12 +139,18 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
         roleDefinitionIdOrName: 'Container Registry Repository Contributor'
         principalType: 'User'
       }
+      {
+        principalId: deployer().objectId
+        // Assign registry-wide permissions
+        roleDefinitionIdOrName: 'Container Registry Repository Catalog Lister'
+        principalType: 'User'
+      }
     ]
 
     // Build the container image
     tasks: [
       {
-        name: 'BuildTask'
+        name: 'LTRBackupImageBuildTask'
         platform: {
           os: 'Linux'
           architecture: 'amd64'
@@ -153,11 +159,9 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
         step: {
           type: 'Docker'
           dockerFilePath: 'dockerfile'
-          imageNames: [
-            'mysqlltrbackup:latest'
-          ]
+          imageNames: ['mysqlltrbackup:latest']
           isPushEnabled: true
-          contextPath: 'https://github.com/SvenAelterman/OrcasNinjaTeam.git#:azure-mysql/LongTermRetentionMySQL'
+          contextPath: 'https://github.com/SvenAelterman/OrcasNinjaTeam.git#1-modernization-checklist:azure-mysql/LongTermRetentionMySQL'
         }
       }
     ]
