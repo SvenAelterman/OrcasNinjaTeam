@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "13832896186420149403"
+      "templateHash": "1397541410756267816"
     }
   },
   "parameters": {
@@ -67,9 +67,13 @@
     "mySqlPassword": {
       "type": "securestring"
     },
+    "scheduleStartDate": {
+      "type": "string",
+      "defaultValue": "[format(dateTimeAdd(utcNow(), 'P1D'), 'yyyy-MM-dd')]"
+    },
     "scheduleStartTime": {
       "type": "string",
-      "defaultValue": "[utcNow()]"
+      "defaultValue": "02:00:00"
     },
     "databaseNamesForBackup": {
       "type": "array",
@@ -658,7 +662,7 @@
                 "description": "Schedule to run every week at 2 AM UTC.",
                 "frequency": "Week",
                 "interval": 1,
-                "startTime": "[parameters('scheduleStartTime')]",
+                "startTime": "[format('{0}T{1}', parameters('scheduleStartDate'), parameters('scheduleStartTime'))]",
                 "timeZone": "America/New_York",
                 "advancedSchedule": {
                   "weekDays": [

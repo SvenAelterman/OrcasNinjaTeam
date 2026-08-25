@@ -19,7 +19,8 @@ param mySqlUsername string = 'sqladmin'
 @secure()
 param mySqlPassword string
 
-param scheduleStartTime string = utcNow()
+param scheduleStartDate string = format(dateTimeAdd(utcNow(), 'P1D'), 'yyyy-MM-dd')
+param scheduleStartTime string = '02:00:00'
 param databaseNamesForBackup array = ['redcapdb']
 param databaseHostName string
 
@@ -60,7 +61,7 @@ module automationAccountModule 'br/public:avm/res/automation/automation-account:
         description: 'Schedule to run every week at 2 AM UTC.'
         frequency: 'Week'
         interval: 1
-        startTime: scheduleStartTime
+        startTime: '${scheduleStartDate}T${scheduleStartTime}'
         timeZone: 'America/New_York'
         advancedSchedule: {
           weekDays: ['Sunday']
