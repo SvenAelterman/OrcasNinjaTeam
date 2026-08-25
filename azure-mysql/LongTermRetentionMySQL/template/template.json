@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "18179803295117361482"
+      "templateHash": "13832896186420149403"
     }
   },
   "parameters": {
@@ -61,11 +61,29 @@
       }
     },
     "mySqlUsername": {
-      "type": "securestring"
+      "type": "string",
+      "defaultValue": "sqladmin"
     },
     "mySqlPassword": {
       "type": "securestring"
+    },
+    "scheduleStartTime": {
+      "type": "string",
+      "defaultValue": "[utcNow()]"
+    },
+    "databaseNamesForBackup": {
+      "type": "array",
+      "defaultValue": [
+        "redcapdb"
+      ]
+    },
+    "databaseHostName": {
+      "type": "string"
     }
+  },
+  "variables": {
+    "runBookName": "BackupMySqlDatabase",
+    "scheduleName": "WeeklyOnSundaySchedule"
   },
   "resources": {
     "userAssignedIdentityModule": {
@@ -625,11 +643,50 @@
           "runbooks": {
             "value": [
               {
-                "name": "BackupMySqlDatabase",
+                "name": "[variables('runBookName')]",
                 "description": "Runbook to backup MySQL database to Azure Storage for long-term retention. See https://techcommunity.microsoft.com/blog/adformysql/azure-database-for-mysql-extending-long-term-retention-by-using-containers/3065164",
                 "type": "PowerShell72",
                 "uri": "[uri(parameters('scriptLocation'), 'runbook/backupmysql.ps1')]",
                 "version": "1.0.0.0"
+              }
+            ]
+          },
+          "schedules": {
+            "value": [
+              {
+                "name": "[variables('scheduleName')]",
+                "description": "Schedule to run every week at 2 AM UTC.",
+                "frequency": "Week",
+                "interval": 1,
+                "startTime": "[parameters('scheduleStartTime')]",
+                "timeZone": "America/New_York",
+                "advancedSchedule": {
+                  "weekDays": [
+                    "Sunday"
+                  ]
+                }
+              }
+            ]
+          },
+          "jobSchedules": {
+            "value": [
+              {
+                "description": "[format('Schedule to run the {0} runbook based on the {1} schedule.', variables('runBookName'), variables('scheduleName'))]",
+                "runbookName": "[variables('runBookName')]",
+                "scheduleName": "[variables('scheduleName')]",
+                "parameters": {
+                  "ManagedIdentityClientId": "[reference('userAssignedIdentityModule').outputs.clientId.value]",
+                  "ContainerResourceGroupName": "[resourceGroup().name]",
+                  "DatabaseHostName": "[parameters('databaseHostName')]",
+                  "MySqlUsername": "[parameters('mySqlUsername')]",
+                  "MySqlPassword": "[parameters('mySqlPassword')]",
+                  "DatabaseNames": "[join(parameters('databaseNamesForBackup'), ' ')]",
+                  "StorageAccountName": "[reference('storageAccountModule').outputs.name.value]",
+                  "BackupFileShareName": "[parameters('backupFileShareName')]",
+                  "ContainerInstanceSubnetResourceId": "[parameters('containerInstanceSubnetResourceId')]",
+                  "ContainerRegistryUrl": "[reference('containerRegistryModule').outputs.loginServer.value]",
+                  "Location": "[parameters('location')]"
+                }
               }
             ]
           },
@@ -5312,6 +5369,8 @@
         }
       },
       "dependsOn": [
+        "containerRegistryModule",
+        "storageAccountModule",
         "userAssignedIdentityModule"
       ]
     },

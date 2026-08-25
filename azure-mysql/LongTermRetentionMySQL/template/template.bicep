@@ -15,10 +15,13 @@ param privateEndpointSubnetResourceId string
 @description('Must be delegated to *Microsoft.ContainerInstance/containerGroups*')
 param containerInstanceSubnetResourceId string
 
-@secure()
-param mySqlUsername string
+param mySqlUsername string = 'sqladmin'
 @secure()
 param mySqlPassword string
+
+param scheduleStartTime string = utcNow()
+param databaseNamesForBackup array = ['redcapdb']
+param databaseHostName string
 
 module userAssignedIdentityModule 'br/public:avm/res/managed-identity/user-assigned-identity:0.6.0' = {
   name: 'userAssignedIdentityModule'
@@ -31,6 +34,9 @@ module userAssignedIdentityModule 'br/public:avm/res/managed-identity/user-assig
   }
 }
 
+var runBookName = 'BackupMySqlDatabase'
+var scheduleName = 'WeeklyOnSundaySchedule'
+
 module automationAccountModule 'br/public:avm/res/automation/automation-account:0.19.2' = {
   name: 'automationAccountModule'
   params: {
@@ -40,11 +46,50 @@ module automationAccountModule 'br/public:avm/res/automation/automation-account:
 
     runbooks: [
       {
-        name: 'BackupMySqlDatabase'
+        name: runBookName
         description: 'Runbook to backup MySQL database to Azure Storage for long-term retention. See https://techcommunity.microsoft.com/blog/adformysql/azure-database-for-mysql-extending-long-term-retention-by-using-containers/3065164'
         type: 'PowerShell72'
         uri: uri(scriptLocation, 'runbook/backupmysql.ps1')
         version: '1.0.0.0'
+      }
+    ]
+
+    schedules: [
+      {
+        name: scheduleName
+        description: 'Schedule to run every week at 2 AM UTC.'
+        frequency: 'Week'
+        interval: 1
+        startTime: scheduleStartTime
+        timeZone: 'America/New_York'
+        advancedSchedule: {
+          weekDays: ['Sunday']
+        }
+      }
+    ]
+
+    jobSchedules: [
+      {
+        description: 'Schedule to run the ${runBookName} runbook based on the ${scheduleName} schedule.'
+        runbookName: runBookName
+        scheduleName: scheduleName
+
+        parameters: {
+          // TODO: List all
+          ManagedIdentityClientId: userAssignedIdentityModule.outputs.clientId
+          ContainerResourceGroupName: resourceGroup().name
+          DatabaseHostName: databaseHostName
+          // TODO: Remove secrets from here
+          MySqlUsername: mySqlUsername
+          MySqlPassword: mySqlPassword
+          // End secrets
+          DatabaseNames: join(databaseNamesForBackup, ' ')
+          StorageAccountName: storageAccountModule.outputs.name
+          BackupFileShareName: backupFileShareName
+          ContainerInstanceSubnetResourceId: containerInstanceSubnetResourceId
+          ContainerRegistryUrl: containerRegistryModule.outputs.loginServer
+          Location: location
+        }
       }
     ]
 
