@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "6465597932701872879"
+      "templateHash": "573091811933301258"
     }
   },
   "parameters": {
@@ -13976,6 +13976,11 @@
                 "principalType": "ServicePrincipal"
               },
               {
+                "principalId": "[reference('userAssignedIdentityModule').outputs.principalId.value]",
+                "roleDefinitionIdOrName": "Container Registry Repository Writer",
+                "principalType": "ServicePrincipal"
+              },
+              {
                 "principalId": "[deployer().objectId]",
                 "roleDefinitionIdOrName": "Container Registry Repository Contributor",
                 "principalType": "User"
@@ -13995,7 +14000,13 @@
                   "os": "Linux",
                   "architecture": "amd64"
                 },
+                "tags": "[parameters('tags')]",
                 "status": "Enabled",
+                "managedIdentities": {
+                  "userAssignedResourceIds": [
+                    "[reference('userAssignedIdentityModule').outputs.resourceId.value]"
+                  ]
+                },
                 "step": {
                   "type": "Docker",
                   "dockerFilePath": "dockerfile",

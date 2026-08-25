@@ -128,9 +128,16 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
     networkRuleBypassAllowedForTasks: true
 
     roleAssignments: [
+      // TODO: is the first role assignment still needed?
       {
         principalId: userAssignedIdentityModule.outputs.principalId
         roleDefinitionIdOrName: 'AcrPull'
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: userAssignedIdentityModule.outputs.principalId
+        // Required role to allow the container instance to push the image to the ABAC-enabled registry
+        roleDefinitionIdOrName: 'Container Registry Repository Writer'
         principalType: 'ServicePrincipal'
       }
       {
@@ -155,7 +162,13 @@ module containerRegistryModule 'br/public:avm/res/container-registry/registry:0.
           os: 'Linux'
           architecture: 'amd64'
         }
+        tags: tags
         status: 'Enabled'
+        // disable-next-line required due to https://github.com/Azure/bicep-registry-modules/issues/7296
+        #disable-next-line BCP037
+        managedIdentities: {
+          userAssignedResourceIds: [userAssignedIdentityModule.outputs.resourceId]
+        }
         step: {
           type: 'Docker'
           dockerFilePath: 'dockerfile'
