@@ -173,9 +173,10 @@ resource containerVirtualNetwork 'Microsoft.Network/virtualNetworks@2025-07-01' 
 // Create role assignment on the virtual network
 module vnetRoleAssignmentModule 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
   name: 'vnetRoleAssignmentModule'
+  scope: resourceGroup(splitSubnetId[2], splitSubnetId[4])
   params: {
     principalId: userAssignedIdentityModule.outputs.principalId
-    roleDefinitionId: 'Network Contributor'
+    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/4d97b98b-1d4f-4787-a291-c67834d212e7' // Network Contributor
     principalType: 'ServicePrincipal'
     resourceId: containerVirtualNetwork.id
 

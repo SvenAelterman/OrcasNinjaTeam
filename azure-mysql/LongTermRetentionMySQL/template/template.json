@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "1459841001866482602"
+      "templateHash": "11721698138073259076"
     }
   },
   "parameters": {
@@ -18002,6 +18002,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "vnetRoleAssignmentModule",
+      "subscriptionId": "[variables('splitSubnetId')[2]]",
+      "resourceGroup": "[variables('splitSubnetId')[4]]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -18012,7 +18014,7 @@
             "value": "[reference('userAssignedIdentityModule').outputs.principalId.value]"
           },
           "roleDefinitionId": {
-            "value": "Network Contributor"
+            "value": "/providers/Microsoft.Authorization/roleDefinitions/4d97b98b-1d4f-4787-a291-c67834d212e7"
           },
           "principalType": {
             "value": "ServicePrincipal"
